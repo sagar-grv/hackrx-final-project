@@ -13,8 +13,8 @@ import os # <-- THE MISSING IMPORT IS NOW ADDED
 # --- Configuration ---
 # This will use the secure environment variable on Render,
 # but will use the key you paste here as a fallback for local testing.
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyD0jB_cYmq3WaeW42n2cP_pbLvvGs18Yy4")
-PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", "pcsk_6Zzwkx_PhK3DdzhjUwQ1c8qNWKWWQQ9vNFVaBcNzHK3AcPEMUNd3FA93hYQPPciHcEh7Pt")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "PASTE_YOUR_GOOGLE_API_KEY_HERE")
+PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY", "PASTE_YOUR_PINECONE_API_KEY_HERE")
 
 genai.configure(api_key=GOOGLE_API_KEY)
 PINECONE_INDEX_NAME = "hackrx-library"
