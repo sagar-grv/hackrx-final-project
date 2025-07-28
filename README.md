@@ -14,7 +14,10 @@ The system uses a Retrieval-Augmented Generation (RAG) architecture:
 
 ## 🚀 API Endpoint
 
-To use the API, send a `POST` request to the `/hackrx/run` endpoint.
+### Welcome Message
+
+- Sending a `GET` request to the root URL (`/`) will return a JSON object with a welcome message and basic information about the API.
+- To use the API, send a `POST` request to the `/hackrx/run` endpoint.
 
 ### Request Body
 
