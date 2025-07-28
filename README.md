@@ -37,5 +37,5 @@ You must include an Authorization header with the Bearer token provided in the h
 
 ## 🛠️ Tech Stack
 - Backend: FastAPI
-- LLM & Embeddings: Google Gemini API
+- LLM & Embeddings: Google Gemini API , Groq API
 - Vector Database: Pinecone
