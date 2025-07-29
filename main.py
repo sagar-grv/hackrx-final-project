@@ -34,12 +34,31 @@ app = FastAPI(title="HackRx 6.0 API - Decision Engine")
 # --- Welcome Message Endpoint ---
 @app.get("/")
 def read_root():
-    """An upgraded welcome message with a workflow diagram at the end."""
+    """An upgraded, more detailed welcome message for the API's root URL."""
     return {
         "status": "ok",
         "message": "Welcome to the HackRx 6.0 Intelligent Query-Retrieval System!",
-        "authors": ["Rohan Jadhav", "Sagar Gurav", "Gemini (Virtual Teammate)"],
-        "instructions": "To use this service, send a POST request to the /hackrx/run endpoint.",
+        "authors": [
+            "Rohan Jadhav",
+            "Sagar Gurav",
+            "Gemini (Virtual Teammate)"
+        ],
+        "documentation": {
+            "interactive_docs": "Please visit /docs for a full interactive API documentation (Swagger UI).",
+            "source_code": "The complete source code is available on GitHub at https://github.com/sagar-grv/hackrx-final-project"
+        },
+        "usage_example": {
+            "description": "Send a POST request to the /hackrx/run endpoint with the following structure:",
+            "endpoint": "POST /hackrx/run",
+            "headers": {
+                "Authorization": "Bearer YOUR_BEARER_TOKEN",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "documents": "https://hackrx.blob.core.windows.net/assets/policy.pdf?sv=...",
+                "questions": ["What is the grace period for premium payment?"]
+            }
+        }
     }
 
 # --- Pydantic Models ---
