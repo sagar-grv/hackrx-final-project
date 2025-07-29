@@ -1,7 +1,7 @@
-# main.py - Final, Secure High-Speed Version
+# main.py - Final, Complete, Polished Decision Engine
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import requests
 from io import BytesIO
 import pypdf
@@ -11,6 +11,7 @@ from groq import Groq
 import time
 import os
 import hashlib
+import json
 
 # --- Configuration ---
 # This code is SAFE for GitHub. It reads the keys from a secure place.
@@ -28,7 +29,18 @@ PINECONE_INDEX_NAME = "hackrx-library"
 index = pc.Index(PINECONE_INDEX_NAME)
 
 SECRET_PASSWORD = "1e83fbe10fa7c1be5ffa312d8b283e496b82c2470dee257fb48b82ad7e8ba562"
-app = FastAPI(title="HackRx 6.0 API - Final Version")
+app = FastAPI(title="HackRx 6.0 API - Decision Engine")
+
+# --- Welcome Message Endpoint ---
+@app.get("/")
+def read_root():
+    """An upgraded welcome message with a workflow diagram at the end."""
+    return {
+        "status": "ok",
+        "message": "Welcome to the HackRx 6.0 Intelligent Query-Retrieval System!",
+        "authors": ["Rohan Jadhav", "Sagar Gurav", "Gemini (Virtual Teammate)"],
+        "instructions": "To use this service, send a POST request to the /hackrx/run endpoint.",
+    }
 
 # --- Pydantic Models ---
 class HackRxRequest(BaseModel):
@@ -36,7 +48,7 @@ class HackRxRequest(BaseModel):
     questions: List[str]
 
 class HackRxResponse(BaseModel):
-    answers: List[str]
+    answers: List[Dict[str, Any]]
 
 # --- Helper Functions ---
 def read_pdf_from_url(url: str) -> str:
@@ -70,35 +82,46 @@ def get_embedding(text: str, model="models/embedding-001"):
         return None
 
 # --- Main "Thinking" Function ---
-def generate_answer(query: str, index: Pinecone.Index, namespace: str):
+def generate_decision(query: str, index: Pinecone.Index, namespace: str):
+    print(f"\n--- Robot is making a decision about: '{query}' ---")
     query_embedding = get_embedding(query)
     if query_embedding is None:
-        return "Sorry, I couldn't understand the question."
+        return {"decision": "Error", "amount": None, "justification": "Could not understand the query."}
 
-    results = index.query(vector=query_embedding, top_k=3, include_metadata=True, namespace=namespace)
+    print("Asking the library for relevant policy clauses...")
+    results = index.query(vector=query_embedding, top_k=5, include_metadata=True, namespace=namespace)
     
     context = ""
     if results['matches']:
-        for match in results['matches']:
-            context += match['metadata']['text'] + "\n---\n"
+        for i, match in enumerate(results['matches']):
+            context += f"Clause {i+1}:\n{match['metadata']['text']}\n---\n"
     
     if not context:
-        return "Sorry, I couldn't find any relevant information in the document."
+        return {"decision": "Not Found", "amount": None, "justification": "Could not find any relevant information in the document."}
 
-    system_prompt = "Based ONLY on the context provided below, answer the question. Do not use any other information. If the answer is not in the context, say 'I could not find the answer in the document.'"
-    user_prompt = f"Context:\n{context}\n\nQuestion:\n{query}"
+    prompt = f"""
+    You are an expert insurance claims processor. Your task is to evaluate a claim based ONLY on the provided policy document clauses.
+
+    **Policy Clauses (Context):**
+    {context}
+
+    **Claim Details (Query):**
+    {query}
+
+    Based strictly on the claim details and the policy clauses, provide a decision. Your response MUST be a single, valid JSON object with three keys: "decision" (string: "Approved", "Partially Approved", or "Rejected"), "amount" (string or null, e.g., "Up to 50,000/eye"), and "justification" (string: a detailed explanation referencing the specific policy clauses from the context that support your decision).
+    """
     
+    print("Giving the case to the Groq AI brain for a final decision...")
     try:
         chat_completion = groq_client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            model="llama3-8b-8192",
+            messages=[{"role": "user", "content": prompt}],
+            model="llama3-70b-8192",
+            response_format={"type": "json_object"},
         )
-        return chat_completion.choices[0].message.content.strip()
+        llm_response_str = chat_completion.choices[0].message.content
+        return json.loads(llm_response_str)
     except Exception as e:
-        return f"Sorry, the Groq AI brain had an error: {e}"
+        return {"decision": "Error", "amount": None, "justification": f"The AI brain had an error: {e}"}
 
 # --- Main API Endpoint ---
 @app.post("/hackrx/run")
@@ -107,7 +130,7 @@ def receive_a_letter(request: HackRxRequest, authorization: Optional[str] = Head
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong or missing password!")
 
     doc_url = request.documents
-    questions = request.questions
+    queries = request.questions
     doc_id_hash = hashlib.sha256(doc_url.encode()).hexdigest()
     
     index_stats = index.describe_index_stats()
@@ -123,15 +146,14 @@ def receive_a_letter(request: HackRxRequest, authorization: Optional[str] = Head
                     vectors_to_upsert.append({"id": f"chunk_{i}", "values": embedding, "metadata": {"text": chunk}})
             if vectors_to_upsert:
                 index.upsert(vectors=vectors_to_upsert, namespace=doc_id_hash)
-                # This is the corrected line:
                 print(f"--- Successfully stored chunks in namespace {doc_id_hash}! ---")
                 time.sleep(10)
     else:
         print(f"Document {doc_id_hash} is already in the library. Skipping the reading part.")
 
     final_answers = []
-    for q in questions:
-        answer = generate_answer(q, index, namespace=doc_id_hash)
-        final_answers.append(answer)
+    for q in queries:
+        decision_json = generate_decision(q, index, namespace=doc_id_hash)
+        final_answers.append(decision_json)
 
     return HackRxResponse(answers=final_answers)
